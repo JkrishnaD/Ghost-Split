@@ -1,0 +1,30 @@
+[package]
+name = "ghost-split"
+version = "0.1.0"
+description = "GhostSplit — group expenses on MagicBlock Ephemeral Rollups + private USDC settlement"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "ghost_split"
+
+[features]
+default = []
+cpi = ["no-entrypoint"]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+idl-build = ["anchor-lang/idl-build"]
+anchor-debug = []
+custom-heap = []
+custom-panic = []
+
+[dependencies]
+anchor-lang = { version = "0.32.1", features = ["init-if-needed"] }
+ephemeral-rollups-sdk = { version = "=0.6.5", features = ["anchor", "disable-realloc"] }
+sha2 = "0.10"
+# Align with MagicBlock / Solana BPF toolchains that cannot parse edition2024 manifests.
+blake3 = "=1.5.5"
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(target_os, values("solana"))'] }
