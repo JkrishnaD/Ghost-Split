@@ -856,7 +856,6 @@ dependencies = [
  "anchor-lang",
  "blake3",
  "ephemeral-rollups-sdk",
- "sha2 0.10.9",
 ]
 
 [[package]]

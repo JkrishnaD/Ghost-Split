@@ -8,6 +8,8 @@ pub fn handler(ctx: Context<JoinGroup>) -> Result<()> {
     let group = &mut ctx.accounts.group;
     let ledger = &mut ctx.accounts.ledger;
     require!(!ledger.is_settled, ErrorCode::AlreadySettled);
+    // Blocked during ER session to keep members.len() == member_balances.len().
+    require!(!group.is_delegated, ErrorCode::AlreadyDelegated);
 
     let member_key = ctx.accounts.member.key();
     require!(

@@ -43,19 +43,29 @@ pub mod ghost_split {
         instructions::mark_settled::handler(ctx)
     }
 
-    /// Delegate `GroupLedger` to MagicBlock Ephemeral Rollup (gasless updates while delegated).
-    pub fn delegate_group_ledger(ctx: Context<DelegateGroupLedger>) -> Result<()> {
-        instructions::delegate_ix::delegate_group_ledger_handler(ctx)
+    // ── ER lifecycle ──────────────────────────────────────────────────────────
+
+    /// Step 1 (base): delegate GroupLedger to ER. Blocks join_group until undelegated.
+    pub fn delegate_group_ledger(
+        ctx: Context<DelegateGroupLedger>,
+        validator: Option<Pubkey>,
+    ) -> Result<()> {
+        instructions::delegate_ix::delegate_group_ledger_handler(ctx, validator)
     }
 
-    /// Commit ledger state from ER back to Solana.
+    /// Step 2 (ER, optional): snapshot current ER state to base mid-session.
     pub fn commit_group_ledger(ctx: Context<CommitGroupLedger>) -> Result<()> {
         instructions::delegate_ix::commit_group_ledger_handler(ctx)
     }
 
-    /// Commit and undelegate ledger (ends ER session).
+    /// Step 3a (ER): commit final state and end the ER session.
     pub fn undelegate_group_ledger(ctx: Context<UndelegateGroupLedger>) -> Result<()> {
         instructions::delegate_ix::undelegate_group_ledger_handler(ctx)
+    }
+
+    /// Step 3b (base): clear is_delegated after undelegation completes.
+    pub fn finalize_undelegate(ctx: Context<FinalizeUndelegate>) -> Result<()> {
+        instructions::delegate_ix::finalize_undelegate_handler(ctx)
     }
 }
 

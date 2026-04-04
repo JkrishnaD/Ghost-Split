@@ -8,7 +8,6 @@ pub enum Currency {
     Usdc,
 }
 
-/// Static group metadata + member list (lives on Solana; member list updates with joins).
 #[account]
 #[derive(InitSpace)]
 pub struct Group {
@@ -21,10 +20,12 @@ pub struct Group {
     pub members: Vec<Pubkey>,
     pub currency: Currency,
     pub created_at: i64,
+    /// True while GroupLedger is on the ER. Route add_expense / mark_settled
+    /// to the ER RPC when set. join_group is blocked to prevent sync issues.
+    pub is_delegated: bool,
     pub bump: u8,
 }
 
-/// Hot state delegated to MagicBlock ER for low-latency, gasless-style updates off the base layer.
 #[account]
 #[derive(InitSpace)]
 pub struct GroupLedger {

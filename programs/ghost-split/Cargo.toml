@@ -22,7 +22,6 @@ custom-panic = []
 [dependencies]
 anchor-lang = { version = "0.32.1", features = ["init-if-needed"] }
 ephemeral-rollups-sdk = { version = "=0.6.5", features = ["anchor", "disable-realloc"] }
-sha2 = "0.10"
 # Align with MagicBlock / Solana BPF toolchains that cannot parse edition2024 manifests.
 blake3 = "=1.5.5"
 

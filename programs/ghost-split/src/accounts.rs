@@ -49,7 +49,7 @@ pub struct JoinGroup<'info> {
 #[derive(Accounts)]
 #[instruction(description: String)]
 pub struct AddExpense<'info> {
-    #[account(mut)]
+    // read-only — ER can snapshot this from base without delegating it
     pub group: Account<'info, Group>,
     #[account(
         mut,
@@ -95,6 +95,7 @@ pub struct DelegateGroupLedger<'info> {
     pub payer: Signer<'info>,
     #[account(mut, del, seeds = [crate::LEDGER_SEED, group.key().as_ref()], bump)]
     pub ledger: AccountInfo<'info>,
+    #[account(mut)]
     pub group: Account<'info, Group>,
 }
 
@@ -126,4 +127,19 @@ pub struct UndelegateGroupLedger<'info> {
     )]
     pub ledger: Account<'info, GroupLedger>,
     pub group: Account<'info, Group>,
+}
+
+/// Clears is_delegated after undelegation. Ledger must be owned by this
+/// program again (constraint fails if undelegation isn't complete yet).
+#[derive(Accounts)]
+pub struct FinalizeUndelegate<'info> {
+    pub authority: Signer<'info>,
+    #[account(mut)]
+    pub group: Account<'info, Group>,
+    #[account(
+        seeds = [crate::LEDGER_SEED, group.key().as_ref()],
+        bump = ledger.bump,
+        constraint = ledger.group == group.key() @ ErrorCode::LedgerMismatch
+    )]
+    pub ledger: Account<'info, GroupLedger>,
 }

@@ -28,6 +28,7 @@ pub fn handler(
     group.members = vec![creator_key];
     group.currency = currency;
     group.created_at = clock.unix_timestamp;
+    group.is_delegated = false;
     group.bump = ctx.bumps.group;
 
     let ledger = &mut ctx.accounts.ledger;

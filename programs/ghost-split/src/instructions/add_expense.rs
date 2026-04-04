@@ -43,8 +43,9 @@ pub fn handler(
     let base = amount / n;
     let rem = (amount % n) as usize;
 
+    let amount_signed = i64::try_from(amount).map_err(|_| ErrorCode::Overflow)?;
     ledger.member_balances[idx_paid] = ledger.member_balances[idx_paid]
-        .checked_add(amount as i64)
+        .checked_add(amount_signed)
         .ok_or(ErrorCode::Overflow)?;
 
     for (i, pk) in split_between.iter().enumerate() {
@@ -57,8 +58,9 @@ pub fn handler(
         if i < rem {
             share = share.checked_add(1).ok_or(ErrorCode::Overflow)?;
         }
+        let share_signed = i64::try_from(share).map_err(|_| ErrorCode::Overflow)?;
         ledger.member_balances[idx] = ledger.member_balances[idx]
-            .checked_sub(share as i64)
+            .checked_sub(share_signed)
             .ok_or(ErrorCode::Overflow)?;
     }
 

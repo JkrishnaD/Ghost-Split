@@ -28,4 +28,8 @@ pub enum ErrorCode {
     Overflow,
     #[msg("Ledger does not match this group")]
     LedgerMismatch,
+    #[msg("Group ledger is already delegated to the ER; call finalize_undelegate first")]
+    AlreadyDelegated,
+    #[msg("Group ledger is not currently delegated")]
+    NotDelegated,
 }
