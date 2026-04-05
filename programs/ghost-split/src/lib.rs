@@ -9,7 +9,7 @@ use ephemeral_rollups_sdk::anchor::ephemeral;
 pub use constants::*;
 pub use state::Currency;
 
-declare_id!("JCwoWzWs2yrSXRt21AmMEi6sWBdk8mgUVWK4ytwexE6b");
+declare_id!("BtXL4LiVwtNYTcxyz5TMNgcYkPzdcrxtESSpNYCaenJc");
 
 #[ephemeral]
 #[program]
@@ -43,7 +43,15 @@ pub mod ghost_split {
         instructions::mark_settled::handler(ctx)
     }
 
-    // ── ER lifecycle ──────────────────────────────────────────────────────────
+    pub fn close_group(ctx: Context<CloseGroup>) -> Result<()> {
+        instructions::close_group::handler(ctx)
+    }
+
+    pub fn remove_expense(ctx: Context<RemoveExpense>) -> Result<()> {
+        instructions::remove_expense::handler(ctx)
+    }
+
+    /// ER lifecycle
 
     /// Step 1 (base): delegate GroupLedger to ER. Blocks join_group until undelegated.
     pub fn delegate_group_ledger(

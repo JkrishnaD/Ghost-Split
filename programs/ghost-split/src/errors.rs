@@ -32,4 +32,6 @@ pub enum ErrorCode {
     AlreadyDelegated,
     #[msg("Group ledger is not currently delegated")]
     NotDelegated,
+    #[msg("Only the expense payer can remove this expense")]
+    NotExpensePayer,
 }

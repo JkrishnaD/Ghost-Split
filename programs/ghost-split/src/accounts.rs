@@ -143,3 +143,46 @@ pub struct FinalizeUndelegate<'info> {
     )]
     pub ledger: Account<'info, GroupLedger>,
 }
+
+/// Closes the group and ledger, returning rent to the creator.
+#[derive(Accounts)]
+pub struct CloseGroup<'info> {
+    #[account(mut)]
+    pub creator: Signer<'info>,
+    #[account(
+        mut,
+        has_one = creator,
+        close = creator
+    )]
+    pub group: Account<'info, Group>,
+    #[account(
+        mut,
+        seeds = [crate::LEDGER_SEED, group.key().as_ref()],
+        bump = ledger.bump,
+        constraint = ledger.group == group.key() @ ErrorCode::LedgerMismatch,
+        close = creator
+    )]
+    pub ledger: Account<'info, GroupLedger>,
+}
+
+/// Removes an expense and returns its rent to the original payer.
+#[derive(Accounts)]
+pub struct RemoveExpense<'info> {
+    pub group: Account<'info, Group>,
+    #[account(
+        mut,
+        seeds = [crate::LEDGER_SEED, group.key().as_ref()],
+        bump = ledger.bump,
+        constraint = ledger.group == group.key() @ ErrorCode::LedgerMismatch
+    )]
+    pub ledger: Account<'info, GroupLedger>,
+    #[account(
+        mut,
+        constraint = expense.group == group.key() @ ErrorCode::LedgerMismatch,
+        constraint = expense.paid_by == expense_payer.key() @ ErrorCode::NotExpensePayer,
+        close = expense_payer
+    )]
+    pub expense: Account<'info, Expense>,
+    #[account(mut)]
+    pub expense_payer: Signer<'info>,
+}
