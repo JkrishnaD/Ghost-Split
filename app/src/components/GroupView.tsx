@@ -94,7 +94,9 @@ export default function GroupView({ groupPdaStr, onBack }: GroupViewProps) {
   const [joining, setJoining] = useState(false);
   const [copied, setCopied] = useState(false);
   // Track which settlement transfers have been paid (by index)
-  const [paidSettlements, setPaidSettlements] = useState<Set<number>>(new Set());
+  const [paidSettlements, setPaidSettlements] = useState<Set<number>>(
+    new Set()
+  );
   const [payingIndex, setPayingIndex] = useState<number | null>(null);
 
   const groupPda = useMemo(() => new PublicKey(groupPdaStr), [groupPdaStr]);
@@ -371,6 +373,29 @@ export default function GroupView({ groupPdaStr, onBack }: GroupViewProps) {
 
   const isMember = group ? group.members.includes(myAddr ?? "") : false;
 
+  // Reusable address chip with copy-on-click
+  function AddrChip({ addr, label }: { addr: string; label?: string }) {
+    const [justCopied, setJustCopied] = useState(false);
+    return (
+      <button
+        type="button"
+        onClick={() => {
+          navigator.clipboard.writeText(addr);
+          setJustCopied(true);
+          setTimeout(() => setJustCopied(false), 1500);
+        }}
+        title={justCopied ? "Copied!" : addr}
+        className="inline-flex items-center gap-1 font-mono text-xs text-white/40 hover:text-white/70 transition-colors group"
+      >
+        <span>{justCopied ? "copied!" : label ?? short(addr)}</span>
+        <Copy
+          size={10}
+          className="opacity-0 group-hover:opacity-60 transition-opacity shrink-0"
+        />
+      </button>
+    );
+  }
+
   if (loading || !group || !ledger) {
     return (
       <div className="flex items-center justify-center py-28 gap-3">
@@ -640,12 +665,10 @@ export default function GroupView({ groupPdaStr, onBack }: GroupViewProps) {
                   {addr.slice(0, 2).toUpperCase()}
                 </div>
 
-                <div className="flex-1 min-w-0">
-                  <span className="text-xs font-mono text-white/40">
-                    {short(addr)}
-                  </span>
+                <div className="flex-1 min-w-0 flex items-center gap-1.5">
+                  <AddrChip addr={addr} />
                   {isMe && (
-                    <span className="ml-1.5 text-[10px] text-accent/50 font-medium">
+                    <span className="text-[10px] text-accent/50 font-medium">
                       you
                     </span>
                   )}
@@ -810,8 +833,8 @@ export default function GroupView({ groupPdaStr, onBack }: GroupViewProps) {
                   <p className="text-sm text-white truncate">
                     {exp.description}
                   </p>
-                  <p className="mt-0.5 text-[11px] text-white/25">
-                    paid by {short(exp.paidBy)} · split{" "}
+                  <p className="mt-0.5 text-[11px] text-white/25 flex items-center gap-1">
+                    paid by <AddrChip addr={exp.paidBy} /> · split{" "}
                     {exp.splitBetween.length} ways
                   </p>
                 </div>
@@ -861,32 +884,48 @@ export default function GroupView({ groupPdaStr, onBack }: GroupViewProps) {
                       return (
                         <div
                           key={i}
-                          className={`flex items-center gap-3 px-4 py-3 ${isMyPayment && !isPaid ? "bg-amber-500/[0.03]" : ""}`}
+                          className={`flex items-center gap-3 px-4 py-3 ${
+                            isMyPayment && !isPaid ? "bg-amber-500/[0.03]" : ""
+                          }`}
                         >
                           <div className="flex flex-1 items-center gap-2 min-w-0">
-                            <span className={`text-xs font-mono truncate ${isMyPayment ? "text-white/70 font-semibold" : "text-white/35"}`}>
-                              {s.from === myAddr ? "you" : short(s.from)}
+                            {s.from === myAddr ? (
+                              <span className="text-xs font-mono text-white/70 font-semibold">
+                                you
+                              </span>
+                            ) : (
+                              <AddrChip addr={s.from} />
+                            )}
+                            <span className="text-white/15 text-xs shrink-0">
+                              →
                             </span>
-                            <span className="text-white/15 text-xs shrink-0">→</span>
-                            <span className={`text-xs font-mono truncate ${s.to === myAddr ? "text-white/70 font-semibold" : "text-white/35"}`}>
-                              {s.to === myAddr ? "you" : short(s.to)}
-                            </span>
+                            {s.to === myAddr ? (
+                              <span className="text-xs font-mono text-white/70 font-semibold">
+                                you
+                              </span>
+                            ) : (
+                              <AddrChip addr={s.to} />
+                            )}
                           </div>
 
                           <span className="shrink-0 text-sm font-semibold text-white tabular-nums">
                             {fmt(s.amount, group.currency)}{" "}
-                            <span className="text-white/30 text-xs">{group.currency}</span>
+                            <span className="text-white/30 text-xs">
+                              {group.currency}
+                            </span>
                           </span>
 
                           {/* Pay button — only shown to the person who owes */}
-                          {isMyPayment && (
-                            isPaid ? (
+                          {isMyPayment &&
+                            (isPaid ? (
                               <span className="shrink-0 flex items-center gap-1 text-[11px] text-emerald-400 font-semibold">
                                 <Check size={12} /> Paid
                               </span>
                             ) : (
                               <button
-                                onClick={() => handlePay(s.to, s.amount, i, group.currency)}
+                                onClick={() =>
+                                  handlePay(s.to, s.amount, i, group.currency)
+                                }
                                 disabled={isPaying}
                                 className="shrink-0 flex items-center gap-1.5 rounded-lg border border-amber-400/25 bg-amber-400/[0.07] px-3 py-1.5 text-[11px] font-semibold text-amber-400 transition-all hover:bg-amber-400/[0.13] disabled:opacity-50"
                               >
@@ -895,8 +934,7 @@ export default function GroupView({ groupPdaStr, onBack }: GroupViewProps) {
                                 ) : null}
                                 {isPaying ? "Paying…" : "Pay"}
                               </button>
-                            )
-                          )}
+                            ))}
                         </div>
                       );
                     })}

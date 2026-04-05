@@ -3,7 +3,6 @@
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletName } from "@solana/wallet-adapter-base";
 import { useState, useRef, useEffect } from "react";
-import Image from "next/image";
 
 export default function CustomWalletButton({
   variant = "header",
@@ -244,7 +243,7 @@ function WalletModal({
                   className="group flex w-full items-center gap-3 rounded-xl border border-white/6 bg-white/3 px-4 py-3 text-left transition-all hover:border-accent/20 hover:bg-accent/5"
                 >
                   {w.adapter.icon && (
-                    <Image
+                    <img
                       src={w.adapter.icon}
                       alt={w.adapter.name}
                       className="h-8 w-8 rounded-lg"
@@ -286,7 +285,7 @@ function WalletModal({
                   className="group flex w-full items-center gap-3 rounded-xl border border-white/4 bg-white/2 px-4 py-3 text-left transition-all hover:border-white/1 hover:bg-white/4"
                 >
                   {w.adapter.icon && (
-                    <Image
+                    <img
                       src={w.adapter.icon}
                       alt={w.adapter.name}
                       className="h-8 w-8 rounded-lg opacity-50"

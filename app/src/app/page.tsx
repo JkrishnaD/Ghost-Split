@@ -2,8 +2,11 @@
 
 import { useWallet } from "@solana/wallet-adapter-react";
 import { motion } from "motion/react";
-import { BsLightningChargeFill, BsShieldLockFill, BsPeopleFill } from "react-icons/bs";
-import WalletConnect from "../components/WalletConnect";
+import {
+  BsLightningChargeFill,
+  BsShieldLockFill,
+  BsPeopleFill,
+} from "react-icons/bs";
 import Dashboard from "../components/Dashboard";
 import CustomWalletButton from "../components/CustomWalletButton";
 
@@ -34,7 +37,6 @@ export default function Home() {
   if (connected) {
     return (
       <>
-        <WalletConnect />
         <Dashboard />
       </>
     );
@@ -42,9 +44,7 @@ export default function Home() {
 
   return (
     <>
-      <WalletConnect />
       <div className="flex flex-col items-center text-center pt-16 pb-8 gap-12">
-
         {/* Hero */}
         <motion.div
           className="flex flex-col items-center gap-4 max-w-225"
@@ -92,8 +92,15 @@ export default function Home() {
               className="text-left border border-white/[0.07] bg-white/3 rounded-xl p-5 cursor-default"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.35 + i * 0.1, duration: 0.4, ease: "easeOut" }}
-              whileHover={{ scale: 1.02, borderColor: "rgba(102,252,241,0.15)" }}
+              transition={{
+                delay: 0.35 + i * 0.1,
+                duration: 0.4,
+                ease: "easeOut",
+              }}
+              whileHover={{
+                scale: 1.02,
+                borderColor: "rgba(102,252,241,0.15)",
+              }}
             >
               <div
                 className="mb-3 flex h-9 w-9 items-center justify-center rounded-lg"
@@ -110,7 +117,6 @@ export default function Home() {
             </motion.div>
           ))}
         </div>
-
       </div>
     </>
   );
