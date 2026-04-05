@@ -31,7 +31,7 @@ export default function RootLayout({
             <div className="absolute -bottom-40 -right-40 w-[400px] h-[400px] bg-violet-500/[0.03] rounded-full blur-[100px]" />
           </div>
 
-          <header className="sticky top-0 z-50 flex items-center justify-between px-6 h-14 border-b border-white/[0.06] bg-bg/80 backdrop-blur-xl">
+          <header className="sticky top-0 z-50 flex items-center justify-between px-6 h-14 border-b border-white/[0.06] bg-black/20 backdrop-blur-sm">
             <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-accent/10 to-transparent" />
 
             <div className="flex items-center gap-2.5">

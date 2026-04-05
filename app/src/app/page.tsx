@@ -9,6 +9,7 @@ import {
 } from "react-icons/bs";
 import Dashboard from "../components/Dashboard";
 import CustomWalletButton from "../components/CustomWalletButton";
+import Image from "next/image";
 
 const FEATURES = [
   {
@@ -72,74 +73,78 @@ export default function Home() {
 
   return (
     <div className="flex flex-col items-center gap-25">
-      <section className="relative w-full flex flex-col items-center text-center pt-5 pb-5 gap-4">
-        <div className="pointer-events-none absolute -top-20 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-accent/[0.04] rounded-full blur-[80px]" />
+      <section className="relative w-full flex flex-col items-center text-center px-4 pt-16 pb-12 gap-0">
+        <div className="fixed inset-0 bg-[url('/background.png')] bg-cover bg-center  -z-10" />
         <motion.div
-          className="flex items-center gap-2 px-3 py-1 rounded-full border border-accent/20 bg-accent/[0.06] text-[10px] font-bold uppercase tracking-[0.18em] text-accent/70"
-          initial={{ opacity: 0, y: -8 }}
+          className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/10 bg-white/5 backdrop-blur-sm text-[10px] font-semibold uppercase tracking-[0.2em] text-white/50 mb-8"
+          initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
         >
-          {" "}
-          <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />{" "}
-          Powered by MagicBlock Ephemeral Rollup{" "}
-        </motion.div>{" "}
+          <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
+          Powered by{" "}
+          <Image src="/magic.png" alt="MagicBlock" width={80} height={80} />
+        </motion.div>
+
         <motion.div
-          className="flex flex-col items-center gap-3"
-          initial={{ opacity: 0, y: 20 }}
+          className="flex flex-col items-center gap-5 mb-10"
+          initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
         >
-          {" "}
-          {/* Reduced heading size */}{" "}
-          <h1 className="font-heading text-4xl md:text-5xl font-extrabold leading-[1.1] tracking-tight max-w-xl">
-            {" "}
-            Split expenses. <br />{" "}
-            <span className="relative text-accent">
-              {" "}
-              Settle privately.{" "}
-              <span className="absolute inset-x-0 -bottom-1 h-px bg-gradient-to-r from-transparent via-accent/50 to-transparent" />{" "}
-            </span>{" "}
-          </h1>{" "}
-          {/* reduced text size */}{" "}
-          <p className="text-white/40 text-sm leading-relaxed max-w-md">
-            {" "}
+          <h1 className="font-heading text-5xl md:text-6xl font-extrabold leading-[1.08] tracking-tight max-w-lg">
+            Split expenses. <br />
+            <span className="relative inline-block text-accent">
+              Settle privately.
+              <span className="absolute inset-x-0 -bottom-1.5 h-px bg-gradient-to-r from-transparent via-accent/60 to-transparent" />
+            </span>
+          </h1>
+
+          <p className="text-white/40 text-sm leading-relaxed max-w-sm">
             Track group expenses gaslessly on-chain, then settle balances with
-            zero public trace using confidential payments.{" "}
-          </p>{" "}
-        </motion.div>{" "}
+            zero public trace using confidential payments.
+          </p>
+        </motion.div>
+
+        {/* CTA group */}
         <motion.div
-          className="flex flex-col items-center gap-2"
-          initial={{ opacity: 0, y: 12 }}
+          className="flex flex-col items-center gap-3 mb-10"
+          initial={{ opacity: 0, y: 14 }}
           animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.45, delay: 0.2 }}
         >
-          {" "}
-          <CustomWalletButton variant="cta" />{" "}
-          <p className="text-[11px] text-white/20">
-            {" "}
-            Connect your Solana wallet to get started{" "}
-          </p>{" "}
-        </motion.div>{" "}
+          <CustomWalletButton variant="cta" />
+          <p className="text-[11px] text-white/25 tracking-wide">
+            Connect your Solana wallet to get started
+          </p>
+        </motion.div>
+
+        {/* Trust badges */}
         <motion.div
-          className="flex items-center gap-3 flex-wrap justify-center"
+          className="flex items-center gap-x-5 gap-y-2 flex-wrap justify-center"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
+          transition={{ duration: 0.4, delay: 0.35 }}
         >
-          {" "}
           {[
             "Solana Devnet",
             "MagicBlock ER",
             "Non-custodial",
             "Open source",
-          ].map((badge) => (
+          ].map((badge, i) => (
             <div
               key={badge}
-              className="flex items-center gap-1 text-[10px] text-white/20"
+              className="flex items-center gap-1.5 text-[10px] text-white/25 tracking-wide"
             >
-              {" "}
-              <span className="w-1 h-1 rounded-full bg-white/15" /> {badge}{" "}
+              {badge}
+              {i < 3 && (
+                <span className="ml-4 w-px h-2.5 bg-white/10 hidden sm:block" />
+              )}
             </div>
-          ))}{" "}
-        </motion.div>{" "}
+          ))}
+        </motion.div>
       </section>
+
       <section className="w-full flex flex-col gap-6">
         <motion.div
           className="flex flex-col items-center gap-1 text-center"
@@ -222,46 +227,49 @@ export default function Home() {
           </p>
         </motion.div>
 
-        <div className="relative grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full">
-          <div className="hidden lg:block absolute top-8 left-[12.5%] right-[12.5%] h-px bg-gradient-to-r from-transparent via-white/[0.07] to-transparent" />
+        <div className="relative w-full">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 w-full">
+            {HOW_IT_WORKS.map((step, i) => (
+              <motion.div
+                key={step.step}
+                className="relative group flex flex-col gap-4 rounded-2xl border border-white/6 bg-white/2.5 p-6 transition-all duration-300 hover:border-accent/20 hover:bg-white/4"
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{
+                  delay: 0.55 + i * 0.08,
+                  duration: 0.4,
+                  ease: [0.23, 1, 0.32, 1],
+                }}
+              >
+                <div className="relative z-10 flex items-center justify-between">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/8 bg-white/3 text-[12px] font-bold text-accent shadow-[0_0_15px_rgba(102,252,241,0.05)]">
+                    {step.step}
+                  </div>
+                  {/*{i === 0 && (
+                    <div className="flex items-center gap-1.5 bg-accent/10 px-2 py-0.5 rounded-full border border-accent/20">
+                      <span className="w-1 h-1 rounded-full bg-accent animate-pulse" />
+                      <span className="text-[9px] font-bold uppercase tracking-wider text-accent/80">Start here</span>
+                    </div>
+                  )}*/}
+                </div>
 
-          {HOW_IT_WORKS.map((step, i) => (
-            <motion.div
-              key={step.step}
-              className="relative flex flex-col gap-3 rounded-2xl border border-white/[0.06] bg-white/[0.025] p-5 overflow-hidden"
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{
-                delay: 0.55 + i * 0.08,
-                duration: 0.4,
-                ease: [0.23, 1, 0.32, 1],
-              }}
-            >
-              <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent" />
+                <div className="relative z-10">
+                  <h3 className="text-[15px] font-bold text-white/90 mb-2 group-hover:text-white transition-colors">
+                    {step.title}
+                  </h3>
+                  <p className="text-[13px] text-white/40 leading-relaxed group-hover:text-white/50 transition-colors">
+                    {step.desc}
+                  </p>
+                </div>
 
-              <div className="flex items-center justify-between">
-                <span className="text-2xl font-extrabold text-white/[0.07] font-heading tabular-nums">
-                  {step.step}
-                </span>
-                {i === 0 && (
-                  <span className="w-2 h-2 rounded-full bg-accent/50 shadow-[0_0_6px_rgba(102,252,241,0.5)]" />
-                )}
-              </div>
-
-              <div>
-                <p className="text-sm font-bold text-white/75 mb-1">
-                  {step.title}
-                </p>
-                <p className="text-xs text-white/30 leading-relaxed">
-                  {step.desc}
-                </p>
-              </div>
-            </motion.div>
-          ))}
+                {/* Subtle bottom glow on hover */}
+                <div className="absolute inset-x-4 bottom-0 h-px bg-gradient-to-r from-transparent via-accent/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+              </motion.div>
+            ))}
+          </div>
         </div>
       </section>
 
-      {/* ── Bottom CTA Banner ── */}
       <motion.section
         className="relative w-full rounded-2xl border border-accent/15 bg-accent/[0.04] overflow-hidden p-8 flex flex-col items-center gap-5 text-center mb-4"
         initial={{ opacity: 0, y: 16 }}

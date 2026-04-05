@@ -210,18 +210,14 @@ export default function Dashboard() {
 
   return (
     <div className="flex flex-col gap-8">
-      {/* ── Hero Header ── */}
       <motion.div
         className="relative rounded-2xl border border-white/[0.07] bg-white/[0.02] overflow-hidden p-7"
         initial={{ opacity: 0, y: -12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
       >
-        {/* Ambient glow */}
         <div className="absolute -top-12 -right-12 w-48 h-48 bg-accent/5 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-accent/20 to-transparent" />
-
-        {/* Grid pattern */}
         <div
           className="absolute inset-0 opacity-[0.03]"
           style={{
@@ -245,8 +241,6 @@ export default function Dashboard() {
               On-chain expense splitting - transparent, gasless, instant
             </p>
           </div>
-
-          {/* Stats row */}
           {groups.length > 0 && (
             <div className="flex items-center gap-3">
               <div className="flex flex-col items-center gap-0.5 px-4 py-2.5 rounded-xl border border-white/[0.06] bg-white/[0.03]">
@@ -301,8 +295,6 @@ export default function Dashboard() {
             </div>
           )}
         </div>
-
-        {/* Action row */}
         <div className="relative flex items-center gap-3 mt-6 pt-5 border-t border-white/[0.05]">
           <button
             onClick={() => setShowCreate((v) => !v)}
@@ -331,8 +323,6 @@ export default function Dashboard() {
           </p>
         </div>
       </motion.div>
-
-      {/* ── Create Panel ── */}
       <AnimatePresence>
         {showCreate && (
           <motion.div
@@ -434,8 +424,6 @@ export default function Dashboard() {
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* ── Groups Grid ── */}
       {loading ? (
         <div className="flex flex-col items-center justify-center py-24 gap-4">
           <div className="relative w-10 h-10">
@@ -478,10 +466,7 @@ export default function Dashboard() {
               whileHover={{ y: -2 }}
               transition={{ duration: 0.2 }}
             >
-              {/* Top shimmer on hover */}
               <span className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-accent/0 to-transparent group-hover:via-accent/25 transition-all duration-500" />
-
-              {/* Status indicator dot */}
               {g.isDelegated && !g.isSettled && (
                 <span className="absolute top-4 right-4 flex h-2 w-2">
                   <span className="absolute inline-flex h-full w-full rounded-full bg-accent opacity-60 animate-ping" />
@@ -490,7 +475,6 @@ export default function Dashboard() {
               )}
 
               <div className="flex items-start gap-3 mb-4">
-                {/* Avatar */}
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/[0.04] border border-white/[0.06] text-sm font-bold text-white/30 group-hover:border-accent/15 group-hover:text-accent/50 transition-all duration-300">
                   {g.name.slice(0, 2).toUpperCase()}
                 </div>
@@ -503,8 +487,6 @@ export default function Dashboard() {
                   </p>
                 </div>
               </div>
-
-              {/* Badges */}
               <div className="flex gap-2 flex-wrap mb-4">
                 {g.isSettled ? (
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
@@ -519,8 +501,6 @@ export default function Dashboard() {
                   {g.currency}
                 </span>
               </div>
-
-              {/* Footer */}
               <div className="flex items-center justify-between pt-3 border-t border-white/[0.05]">
                 <span className="text-[11px] text-white/20 flex items-center gap-1.5">
                   <Users size={11} className="text-white/15" />
@@ -535,8 +515,6 @@ export default function Dashboard() {
           ))}
         </motion.div>
       )}
-
-      {/* ── Join Section ── */}
       <motion.div
         className="relative border-t border-white/[0.05] pt-8"
         initial={{ opacity: 0 }}

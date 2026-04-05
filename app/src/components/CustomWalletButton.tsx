@@ -193,13 +193,10 @@ function WalletModal({
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
         >
-          {/* Backdrop */}
           <motion.div
             className="absolute inset-0 bg-black/70 backdrop-blur-md"
             onClick={onClose}
           />
-
-          {/* Modal */}
           <motion.div
             ref={modalRef}
             className="relative w-full max-w-sm rounded-2xl border border-white/[0.08] bg-[#0d1117]/95 backdrop-blur-xl shadow-2xl overflow-hidden"
@@ -208,13 +205,8 @@ function WalletModal({
             exit={{ scale: 0.92, opacity: 0, y: 16 }}
             transition={{ duration: 0.25, ease: [0.23, 1, 0.32, 1] }}
           >
-            {/* Top glow line */}
             <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-accent/40 to-transparent" />
-
-            {/* Ambient glow */}
             <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-48 h-48 bg-accent/5 rounded-full blur-3xl pointer-events-none" />
-
-            {/* Header */}
             <div className="relative flex items-center justify-between border-b border-white/[0.06] px-5 py-4">
               <div className="flex items-center gap-3">
                 <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-accent/10 border border-accent/20 shadow-[0_0_12px_rgba(102,252,241,0.1)]">
@@ -261,8 +253,6 @@ function WalletModal({
                 </svg>
               </button>
             </div>
-
-            {/* Wallet list */}
             <div className="flex flex-col gap-3 p-5">
               {detectedWallets.length > 0 && (
                 <div className="flex flex-col gap-1.5">
@@ -381,8 +371,6 @@ function WalletModal({
                 </div>
               )}
             </div>
-
-            {/* Footer */}
             <div className="relative border-t border-white/[0.05] px-5 py-3">
               <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-white/5 to-transparent" />
               <p className="text-center text-[11px] text-white/15 tracking-wide">

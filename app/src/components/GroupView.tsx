@@ -515,10 +515,7 @@ export default function GroupView({ groupPdaStr, onBack }: GroupViewProps) {
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Header */}
       <BackHeader />
-
-      {/* Quick stats row */}
       {expenses.length > 0 && (
         <motion.div
           custom={1}
@@ -559,8 +556,6 @@ export default function GroupView({ groupPdaStr, onBack }: GroupViewProps) {
           ))}
         </motion.div>
       )}
-
-      {/* Invite Card */}
       <motion.div
         custom={2}
         variants={fadeUp}
@@ -610,8 +605,6 @@ export default function GroupView({ groupPdaStr, onBack }: GroupViewProps) {
           </p>
         )}
       </motion.div>
-
-      {/* ER Mode Panel */}
       <motion.div
         custom={3}
         variants={fadeUp}
@@ -679,8 +672,6 @@ export default function GroupView({ groupPdaStr, onBack }: GroupViewProps) {
           </button>
         )}
       </motion.div>
-
-      {/* Balances */}
       <motion.div
         custom={4}
         variants={fadeUp}
@@ -786,8 +777,6 @@ export default function GroupView({ groupPdaStr, onBack }: GroupViewProps) {
           })()}
         </div>
       </motion.div>
-
-      {/* Add Expense */}
       {!ledger.isSettled && (
         <motion.div
           custom={5}
@@ -926,8 +915,6 @@ export default function GroupView({ groupPdaStr, onBack }: GroupViewProps) {
           </AnimatePresence>
         </motion.div>
       )}
-
-      {/* Expense List */}
       {expenses.length > 0 && (
         <motion.div
           custom={6}
@@ -976,8 +963,6 @@ export default function GroupView({ groupPdaStr, onBack }: GroupViewProps) {
           </div>
         </motion.div>
       )}
-
-      {/* Settlement Section */}
       {!ledger.isSettled &&
         (() => {
           const settlements = computeSettlements(
