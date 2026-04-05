@@ -1,0 +1,781 @@
+{
+  "address": "BtXL4LiVwtNYTcxyz5TMNgcYkPzdcrxtESSpNYCaenJc",
+  "metadata": {
+    "name": "ghost_split",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "GhostSplit — group expenses on MagicBlock Ephemeral Rollups + private USDC settlement"
+  },
+  "instructions": [
+    {
+      "name": "add_expense",
+      "discriminator": [171, 23, 8, 240, 62, 31, 254, 144],
+      "accounts": [
+        {
+          "name": "group"
+        },
+        {
+          "name": "ledger",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [101, 114, 95, 108, 101, 100, 103, 101, 114]
+              },
+              {
+                "kind": "account",
+                "path": "group"
+              }
+            ]
+          }
+        },
+        {
+          "name": "expense",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [101, 120, 112, 101, 110, 115, 101]
+              },
+              {
+                "kind": "account",
+                "path": "group"
+              },
+              {
+                "kind": "account",
+                "path": "ledger.expense_count",
+                "account": "GroupLedger"
+              }
+            ]
+          }
+        },
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "description",
+          "type": "string"
+        },
+        {
+          "name": "amount",
+          "type": "u64"
+        },
+        {
+          "name": "split_between",
+          "type": {
+            "vec": "pubkey"
+          }
+        }
+      ]
+    },
+    {
+      "name": "close_group",
+      "discriminator": [40, 187, 201, 187, 18, 194, 122, 232],
+      "accounts": [
+        {
+          "name": "creator",
+          "writable": true,
+          "signer": true,
+          "relations": ["group"]
+        },
+        {
+          "name": "group",
+          "writable": true
+        },
+        {
+          "name": "ledger",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [101, 114, 95, 108, 101, 100, 103, 101, 114]
+              },
+              {
+                "kind": "account",
+                "path": "group"
+              }
+            ]
+          }
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "commit_group_ledger",
+      "docs": [
+        "Step 2 (ER, optional): snapshot current ER state to base mid-session."
+      ],
+      "discriminator": [104, 110, 236, 9, 179, 249, 132, 83],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "ledger",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [101, 114, 95, 108, 101, 100, 103, 101, 114]
+              },
+              {
+                "kind": "account",
+                "path": "group"
+              }
+            ]
+          }
+        },
+        {
+          "name": "group"
+        },
+        {
+          "name": "magic_program",
+          "address": "Magic11111111111111111111111111111111111111"
+        },
+        {
+          "name": "magic_context",
+          "writable": true,
+          "address": "MagicContext1111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "create_group",
+      "discriminator": [79, 60, 158, 134, 61, 199, 56, 248],
+      "accounts": [
+        {
+          "name": "creator",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "group",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [103, 114, 111, 117, 112]
+              },
+              {
+                "kind": "account",
+                "path": "creator"
+              },
+              {
+                "kind": "arg",
+                "path": "group_id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "ledger",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [101, 114, 95, 108, 101, 100, 103, 101, 114]
+              },
+              {
+                "kind": "account",
+                "path": "group"
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "group_id",
+          "type": "u64"
+        },
+        {
+          "name": "name",
+          "type": "string"
+        },
+        {
+          "name": "description",
+          "type": "string"
+        },
+        {
+          "name": "currency",
+          "type": {
+            "defined": {
+              "name": "Currency"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "delegate_group_ledger",
+      "docs": [
+        "ER lifecycle",
+        "Step 1 (base): delegate GroupLedger to ER. Blocks join_group until undelegated."
+      ],
+      "discriminator": [50, 105, 227, 192, 160, 187, 130, 4],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "buffer_ledger",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [98, 117, 102, 102, 101, 114]
+              },
+              {
+                "kind": "account",
+                "path": "ledger"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                161, 199, 200, 125, 44, 161, 80, 59, 6, 92, 145, 254, 95, 85,
+                144, 121, 129, 88, 198, 5, 220, 169, 148, 230, 136, 74, 68, 102,
+                140, 15, 139, 73
+              ]
+            }
+          }
+        },
+        {
+          "name": "delegation_record_ledger",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [100, 101, 108, 101, 103, 97, 116, 105, 111, 110]
+              },
+              {
+                "kind": "account",
+                "path": "ledger"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "delegation_program"
+            }
+          }
+        },
+        {
+          "name": "delegation_metadata_ledger",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  100, 101, 108, 101, 103, 97, 116, 105, 111, 110, 45, 109, 101,
+                  116, 97, 100, 97, 116, 97
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "ledger"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "delegation_program"
+            }
+          }
+        },
+        {
+          "name": "ledger",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [101, 114, 95, 108, 101, 100, 103, 101, 114]
+              },
+              {
+                "kind": "account",
+                "path": "group"
+              }
+            ]
+          }
+        },
+        {
+          "name": "group",
+          "writable": true
+        },
+        {
+          "name": "owner_program",
+          "address": "BtXL4LiVwtNYTcxyz5TMNgcYkPzdcrxtESSpNYCaenJc"
+        },
+        {
+          "name": "delegation_program",
+          "address": "DELeGGvXpWV2fqJUhqcF5ZSYMS4JTLjteaAMARRSaeSh"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "validator",
+          "type": {
+            "option": "pubkey"
+          }
+        }
+      ]
+    },
+    {
+      "name": "finalize_undelegate",
+      "docs": [
+        "Step 3b (base): clear is_delegated after undelegation completes."
+      ],
+      "discriminator": [207, 137, 78, 165, 131, 136, 142, 250],
+      "accounts": [
+        {
+          "name": "authority",
+          "signer": true
+        },
+        {
+          "name": "group",
+          "writable": true
+        },
+        {
+          "name": "ledger",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [101, 114, 95, 108, 101, 100, 103, 101, 114]
+              },
+              {
+                "kind": "account",
+                "path": "group"
+              }
+            ]
+          }
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "join_group",
+      "discriminator": [121, 56, 199, 19, 250, 70, 44, 184],
+      "accounts": [
+        {
+          "name": "group",
+          "writable": true
+        },
+        {
+          "name": "ledger",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [101, 114, 95, 108, 101, 100, 103, 101, 114]
+              },
+              {
+                "kind": "account",
+                "path": "group"
+              }
+            ]
+          }
+        },
+        {
+          "name": "member",
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "mark_settled",
+      "discriminator": [85, 36, 192, 146, 83, 42, 49, 60],
+      "accounts": [
+        {
+          "name": "group"
+        },
+        {
+          "name": "ledger",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [101, 114, 95, 108, 101, 100, 103, 101, 114]
+              },
+              {
+                "kind": "account",
+                "path": "group"
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority",
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "process_undelegation",
+      "discriminator": [196, 28, 41, 206, 48, 37, 51, 167],
+      "accounts": [
+        {
+          "name": "base_account",
+          "writable": true
+        },
+        {
+          "name": "buffer"
+        },
+        {
+          "name": "payer",
+          "writable": true
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "account_seeds",
+          "type": {
+            "vec": "bytes"
+          }
+        }
+      ]
+    },
+    {
+      "name": "remove_expense",
+      "discriminator": [19, 156, 145, 30, 193, 192, 182, 215],
+      "accounts": [
+        {
+          "name": "group"
+        },
+        {
+          "name": "ledger",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [101, 114, 95, 108, 101, 100, 103, 101, 114]
+              },
+              {
+                "kind": "account",
+                "path": "group"
+              }
+            ]
+          }
+        },
+        {
+          "name": "expense",
+          "writable": true
+        },
+        {
+          "name": "expense_payer",
+          "writable": true,
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "undelegate_group_ledger",
+      "docs": ["Step 3a (ER): commit final state and end the ER session."],
+      "discriminator": [72, 69, 58, 223, 233, 243, 142, 253],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "ledger",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [101, 114, 95, 108, 101, 100, 103, 101, 114]
+              },
+              {
+                "kind": "account",
+                "path": "group"
+              }
+            ]
+          }
+        },
+        {
+          "name": "group"
+        },
+        {
+          "name": "magic_program",
+          "address": "Magic11111111111111111111111111111111111111"
+        },
+        {
+          "name": "magic_context",
+          "writable": true,
+          "address": "MagicContext1111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    }
+  ],
+  "accounts": [
+    {
+      "name": "Expense",
+      "discriminator": [49, 167, 206, 160, 209, 254, 24, 100]
+    },
+    {
+      "name": "Group",
+      "discriminator": [209, 249, 208, 63, 182, 89, 186, 254]
+    },
+    {
+      "name": "GroupLedger",
+      "discriminator": [145, 95, 118, 143, 122, 235, 176, 186]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "GroupFull",
+      "msg": "Group is full (max 10 members)"
+    },
+    {
+      "code": 6001,
+      "name": "NotMember",
+      "msg": "Not a group member"
+    },
+    {
+      "code": 6002,
+      "name": "AlreadySettled",
+      "msg": "Group already settled"
+    },
+    {
+      "code": 6003,
+      "name": "NameTooLong",
+      "msg": "Name too long"
+    },
+    {
+      "code": 6004,
+      "name": "DescriptionTooLong",
+      "msg": "Description too long"
+    },
+    {
+      "code": 6005,
+      "name": "AlreadyMember",
+      "msg": "Already a member"
+    },
+    {
+      "code": 6006,
+      "name": "ExpenseDescTooLong",
+      "msg": "Expense description too long"
+    },
+    {
+      "code": 6007,
+      "name": "EmptySplit",
+      "msg": "Invalid split: must include at least one member"
+    },
+    {
+      "code": 6008,
+      "name": "SplitNotMember",
+      "msg": "Split member is not in the group"
+    },
+    {
+      "code": 6009,
+      "name": "SplitTooMany",
+      "msg": "Too many people in split"
+    },
+    {
+      "code": 6010,
+      "name": "PayerNotMember",
+      "msg": "Payer is not a group member"
+    },
+    {
+      "code": 6011,
+      "name": "Overflow",
+      "msg": "Arithmetic overflow"
+    },
+    {
+      "code": 6012,
+      "name": "LedgerMismatch",
+      "msg": "Ledger does not match this group"
+    },
+    {
+      "code": 6013,
+      "name": "AlreadyDelegated",
+      "msg": "Group ledger is already delegated to the ER; call finalize_undelegate first"
+    },
+    {
+      "code": 6014,
+      "name": "NotDelegated",
+      "msg": "Group ledger is not currently delegated"
+    },
+    {
+      "code": 6015,
+      "name": "NotExpensePayer",
+      "msg": "Only the expense payer can remove this expense"
+    }
+  ],
+  "types": [
+    {
+      "name": "Currency",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Sol"
+          },
+          {
+            "name": "Usdc"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Expense",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "group",
+            "type": "pubkey"
+          },
+          {
+            "name": "paid_by",
+            "type": "pubkey"
+          },
+          {
+            "name": "description",
+            "type": "string"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "split_between",
+            "type": {
+              "vec": "pubkey"
+            }
+          },
+          {
+            "name": "created_at",
+            "type": "i64"
+          },
+          {
+            "name": "index",
+            "type": "u32"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Group",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "creator",
+            "type": "pubkey"
+          },
+          {
+            "name": "name",
+            "type": "string"
+          },
+          {
+            "name": "description",
+            "type": "string"
+          },
+          {
+            "name": "members",
+            "type": {
+              "vec": "pubkey"
+            }
+          },
+          {
+            "name": "currency",
+            "type": {
+              "defined": {
+                "name": "Currency"
+              }
+            }
+          },
+          {
+            "name": "created_at",
+            "type": "i64"
+          },
+          {
+            "name": "is_delegated",
+            "docs": [
+              "True while GroupLedger is on the ER. Route add_expense / mark_settled",
+              "to the ER RPC when set. join_group is blocked to prevent sync issues."
+            ],
+            "type": "bool"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "GroupLedger",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "group",
+            "type": "pubkey"
+          },
+          {
+            "name": "member_balances",
+            "type": {
+              "vec": "i64"
+            }
+          },
+          {
+            "name": "expense_count",
+            "type": "u32"
+          },
+          {
+            "name": "is_settled",
+            "type": "bool"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    }
+  ]
+}

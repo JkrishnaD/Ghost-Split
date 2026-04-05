@@ -1,8 +1,8 @@
 import { Program, AnchorProvider } from "@coral-xyz/anchor";
 import { PublicKey } from "@solana/web3.js";
 import BN from "bn.js";
-import idl from "../../../target/idl/ghost_split.json";
-import type { GhostSplit } from "../../../target/types/ghost_split";
+import idl from "../../src/idl/ghost_split.json";
+import type { GhostSplit } from "../../src/idl/types/ghost_split";
 
 export const PROGRAM_ID = new PublicKey(
   "BtXL4LiVwtNYTcxyz5TMNgcYkPzdcrxtESSpNYCaenJc"
