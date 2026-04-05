@@ -156,7 +156,7 @@ async function getFixture(): Promise<Fixture> {
 /** MagicBlock ER txs need delegation + magic programs on-chain; set `GHOST_SPLIT_TEST_ER=1` on a capable cluster. */
 const RUN_ER = process.env.GHOST_SPLIT_TEST_ER === "1";
 
-describe("ghost-split — core flow (create / join / expenses / settle)", function () {
+describe("ghost-split — core flow (create / close / join / expenses / settle)", function () {
   this.timeout(120_000);
 
   it("create_group initializes group + ledger PDAs", async () => {
@@ -185,6 +185,34 @@ describe("ghost-split — core flow (create / join / expenses / settle)", functi
     expect(l.memberBalances[0].toNumber()).to.eq(0);
     expect(l.expenseCount).to.eq(0);
     expect(l.isSettled).to.eq(false);
+  });
+
+  it("close_group closes accounts", async () => {
+    const ctx = await getFixture();
+    const groupId = uniqueGroupId();
+
+    const group = groupPda(ctx.program.programId, ctx.creator, groupId);
+
+    await ctx.program.methods
+      .createGroup(groupId, "Close test", "", { sol: {} })
+      .accounts({
+        creator: ctx.creator,
+      })
+      .rpc();
+
+    await ctx.program.methods
+      .closeGroup()
+      .accounts({
+        group,
+      })
+      .rpc();
+
+    try {
+      await ctx.program.account.group.fetch(group);
+      throw new Error("group should be closed");
+    } catch (_) {
+      expect(true).to.eq(true);
+    }
   });
 
   it("join_group adds member and ledger row", async () => {
@@ -257,6 +285,133 @@ describe("ghost-split — core flow (create / join / expenses / settle)", functi
     expect(e.amount.toNumber()).to.eq(300);
     expect(e.paidBy.toBase58()).to.eq(ctx.creator.toBase58());
     expect(e.splitBetween.length).to.eq(2);
+  });
+
+  it("remove_expense reverses balances correctly", async () => {
+    const ctx = await getFixture();
+    const groupId = uniqueGroupId();
+
+    const group = groupPda(ctx.program.programId, ctx.creator, groupId);
+    const ledger = ledgerPda(ctx.program.programId, group);
+
+    await ctx.program.methods
+      .createGroup(groupId, "Remove test", "", { usdc: {} })
+      .accounts({ creator: ctx.creator })
+      .rpc();
+
+    await ctx.program.methods
+      .joinGroup()
+      .accounts({ group, member: ctx.alice.publicKey })
+      .signers([ctx.alice])
+      .rpc();
+
+    const expense = expensePda(ctx.program.programId, group, 0);
+
+    await ctx.program.methods
+      .addExpense("Dinner", new BN(100), [ctx.creator, ctx.alice.publicKey])
+      .accounts({
+        group,
+        payer: ctx.creator,
+      })
+      .rpc();
+
+    // remove expense
+    await ctx.program.methods
+      .removeExpense()
+      .accounts({
+        group,
+        expense,
+        expensePayer: ctx.creator,
+      })
+      .rpc();
+
+    const l = await ctx.program.account.groupLedger.fetch(ledger);
+
+    expect(l.memberBalances[0].toNumber()).to.eq(0);
+    expect(l.memberBalances[1].toNumber()).to.eq(0);
+  });
+
+  it("remove_expense rejects non payer", async () => {
+    const ctx = await getFixture();
+    const groupId = uniqueGroupId();
+
+    const group = groupPda(ctx.program.programId, ctx.creator, groupId);
+
+    await ctx.program.methods
+      .createGroup(groupId, "Unauthorized", "", { sol: {} })
+      .accounts({ creator: ctx.creator })
+      .rpc();
+
+    const expense = expensePda(ctx.program.programId, group, 0);
+
+    await ctx.program.methods
+      .addExpense("Dinner", new BN(100), [ctx.creator])
+      .accounts({
+        group,
+        payer: ctx.creator,
+      })
+      .rpc();
+
+    try {
+      await ctx.program.methods
+        .removeExpense()
+        .accounts({
+          group,
+          expense,
+          expensePayer: ctx.alice.publicKey,
+        })
+        .signers([ctx.alice])
+        .rpc();
+
+      throw new Error("expected NotExpensePayer");
+    } catch (e) {
+      assertAnchorError(e, "NotExpensePayer");
+    }
+  });
+
+  it("remove_expense rejects after settled", async () => {
+    const ctx = await getFixture();
+    const groupId = uniqueGroupId();
+
+    const group = groupPda(ctx.program.programId, ctx.creator, groupId);
+
+    await ctx.program.methods
+      .createGroup(groupId, "Settled", "", { sol: {} })
+      .accounts({ creator: ctx.creator })
+      .rpc();
+
+    const expense = expensePda(ctx.program.programId, group, 0);
+
+    await ctx.program.methods
+      .addExpense("Dinner", new BN(100), [ctx.creator])
+      .accounts({
+        group,
+        payer: ctx.creator,
+      })
+      .rpc();
+
+    await ctx.program.methods
+      .markSettled()
+      .accounts({
+        group,
+        authority: ctx.creator,
+      })
+      .rpc();
+
+    try {
+      await ctx.program.methods
+        .removeExpense()
+        .accounts({
+          group,
+          expense,
+          expensePayer: ctx.creator,
+        })
+        .rpc();
+
+      throw new Error("expected AlreadySettled");
+    } catch (e) {
+      assertAnchorError(e, "AlreadySettled");
+    }
   });
 
   it("mark_settled clears ledger balances", async () => {
