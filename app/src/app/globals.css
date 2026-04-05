@@ -1,0 +1,55 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@600;700;800&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-body: 'Inter', system-ui, sans-serif;
+  --font-heading: 'Outfit', system-ui, sans-serif;
+  --color-accent: #66fcf1;
+  --color-accent-dark: #45a29e;
+  --color-bg: #080a0f;
+}
+
+html, body {
+  background: #080a0f;
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Wallet adapter overrides */
+.wallet-adapter-button {
+  background: transparent !important;
+  border: 1px solid rgba(255,255,255,0.1) !important;
+  color: rgba(255,255,255,0.6) !important;
+  font-family: var(--font-body) !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  padding: 0 12px !important;
+  border-radius: 6px !important;
+  transition: all 0.15s ease !important;
+  height: 34px !important;
+  min-height: unset !important;
+  line-height: 1 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+}
+.wallet-adapter-button i {
+  display: none !important;
+}
+.wallet-adapter-button:not([disabled]):hover {
+  background: rgba(255,255,255,0.05) !important;
+  border-color: rgba(255,255,255,0.2) !important;
+  color: #fff !important;
+}
+.wallet-adapter-button-trigger {
+  background: rgba(102,252,241,0.08) !important;
+  border-color: rgba(102,252,241,0.2) !important;
+  color: #66fcf1 !important;
+}
+.wallet-adapter-button-trigger:not([disabled]):hover {
+  background: rgba(102,252,241,0.15) !important;
+}
+.wallet-adapter-button .wallet-adapter-button-start-icon {
+  width: 16px !important;
+  height: 16px !important;
+}
