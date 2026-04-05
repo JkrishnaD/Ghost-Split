@@ -17,7 +17,8 @@ import {
 import { loadGroups, saveGroup, removeGroup } from "../lib/groups";
 import { toast } from "sonner";
 import GroupView from "./GroupView";
-import { Plus, ArrowRight, Users, Zap } from "lucide-react";
+import { Plus, ArrowRight, Users, Zap, Search } from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
 
 interface GroupCard {
   pda: string;
@@ -26,7 +27,25 @@ interface GroupCard {
   memberCount: number;
   isDelegated: boolean;
   isSettled: boolean;
+  expenseCount: number;
+  totalTracked: number; // sum of positive balances in lamports/micro-units
 }
+
+const container = {
+  hidden: {},
+  show: {
+    transition: { staggerChildren: 0.07 },
+  },
+};
+
+const cardAnim = {
+  hidden: { opacity: 0, y: 16 },
+  show: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.35, ease: [0.23, 1, 0.32, 1] as const },
+  },
+};
 
 export default function Dashboard() {
   const { publicKey } = useWallet();
@@ -63,9 +82,16 @@ export default function Dashboard() {
         const pda = g.publicKey.toBase58();
         const pk = g.publicKey;
         let isSettled = false;
+        let expenseCount = 0;
+        let totalTracked = 0;
         try {
           const l = await program.account.groupLedger.fetch(ledgerPda(pk));
           isSettled = l.isSettled as boolean;
+          expenseCount = l.expenseCount as number;
+          totalTracked = (l.memberBalances as any[])
+            .map((b: any) => b.toNumber())
+            .filter((b: number) => b > 0)
+            .reduce((a: number, b: number) => a + b, 0);
         } catch {}
         seen.set(pda, {
           pda,
@@ -74,6 +100,8 @@ export default function Dashboard() {
           memberCount: g.account.members.length,
           isDelegated: g.account.isDelegated,
           isSettled,
+          expenseCount,
+          totalTracked,
         });
       }
 
@@ -83,6 +111,10 @@ export default function Dashboard() {
           const pk = new PublicKey(s.pda);
           const g = await program.account.group.fetch(pk);
           const l = await program.account.groupLedger.fetch(ledgerPda(pk));
+          const totalTracked = (l.memberBalances as any[])
+            .map((b: any) => b.toNumber())
+            .filter((b: number) => b > 0)
+            .reduce((a: number, b: number) => a + b, 0);
           seen.set(s.pda, {
             pda: s.pda,
             name: g.name,
@@ -90,6 +122,8 @@ export default function Dashboard() {
             memberCount: g.members.length,
             isDelegated: g.isDelegated,
             isSettled: l.isSettled as boolean,
+            expenseCount: l.expenseCount as number,
+            totalTracked,
           });
         } catch {
           removeGroup(s.pda);
@@ -165,207 +199,378 @@ export default function Dashboard() {
     );
   }
 
+  const liveCount = groups.filter((g) => g.isDelegated && !g.isSettled).length;
+  const settledCount = groups.filter((g) => g.isSettled).length;
+  const totalExpenses = groups.reduce((a, g) => a + g.expenseCount, 0);
+  // Sum SOL groups only (lamports → SOL). USDC groups excluded to avoid mixing units.
+  const totalSolTracked =
+    groups
+      .filter((g) => g.currency === "SOL")
+      .reduce((a, g) => a + g.totalTracked, 0) / 1e9;
+
   return (
-    <div className="flex flex-col gap-10">
-      {/* Header */}
-      <div className="flex items-end justify-between gap-6">
-        <div className="flex flex-col gap-1">
-          <h1 className="font-heading text-3xl font-extrabold text-white tracking-tight">
-            Your Groups
-          </h1>
-          <p className="text-sm text-white/40">
-            Track and settle shared expenses on-chain
-          </p>
-        </div>
-        <button
-          onClick={() => setShowCreate((v) => !v)}
-          className={`shrink-0 flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all ${
-            showCreate
-              ? "border border-white/10 text-white/50 hover:text-white hover:border-white/20"
-              : "bg-accent/10 border border-accent/25 text-accent hover:bg-accent/15"
-          }`}
-        >
-          {showCreate ? (
-            "Cancel"
-          ) : (
-            <>
-              <Plus size={16} /> New Group
-            </>
-          )}
-        </button>
-      </div>
+    <div className="flex flex-col gap-8">
+      {/* ── Hero Header ── */}
+      <motion.div
+        className="relative rounded-2xl border border-white/[0.07] bg-white/[0.02] overflow-hidden p-7"
+        initial={{ opacity: 0, y: -12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
+      >
+        {/* Ambient glow */}
+        <div className="absolute -top-12 -right-12 w-48 h-48 bg-accent/5 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-accent/20 to-transparent" />
 
-      {/* Create Panel */}
-      {showCreate && (
-        <div className="border border-white/[0.07] bg-white/3 rounded-2xl p-6 flex flex-col gap-5">
-          <h3 className="text-sm font-semibold text-white flex items-center gap-2">
-            <Zap size={16} className="text-accent" />
-            Create New Group
-          </h3>
-          <form onSubmit={handleCreate} className="flex flex-col gap-4">
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[11px] font-medium uppercase tracking-widest text-white/30">
-                Group Name
-              </label>
-              <input
-                className="w-full bg-white/4 border border-white/8 rounded-lg px-4 py-2.5 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/20 transition-all"
-                placeholder="e.g. Goa Trip"
-                value={groupName}
-                onChange={(e) => setGroupName(e.target.value)}
-                required
-                maxLength={32}
-              />
+        {/* Grid pattern */}
+        <div
+          className="absolute inset-0 opacity-[0.03]"
+          style={{
+            backgroundImage: `linear-gradient(rgba(102,252,241,0.6) 1px, transparent 1px), linear-gradient(90deg, rgba(102,252,241,0.6) 1px, transparent 1px)`,
+            backgroundSize: "40px 40px",
+          }}
+        />
+
+        <div className="relative flex items-end justify-between gap-6 flex-wrap">
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-2.5 mb-1">
+              <div className="flex h-2 w-2 rounded-full bg-accent shadow-[0_0_8px_rgba(102,252,241,0.8)]" />
+              <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-accent/60">
+                GhostSplit
+              </span>
             </div>
-
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[11px] font-medium uppercase tracking-widest text-white/30">
-                Description (Optional)
-              </label>
-              <input
-                className="w-full bg-white/4 border border-white/8 rounded-lg px-4 py-2.5 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/20 transition-all"
-                placeholder="Add details about this group"
-                value={groupDesc}
-                onChange={(e) => setGroupDesc(e.target.value)}
-                maxLength={64}
-              />
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[11px] font-medium uppercase tracking-widest text-white/30">
-                Currency
-              </label>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setCurrency("SOL")}
-                  className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium border transition-all ${
-                    currency === "SOL"
-                      ? "bg-accent/10 border-accent/30 text-accent"
-                      : "bg-white/3 border-white/[0.07] text-white/40 hover:text-white/70"
-                  }`}
-                >
-                  SOL
-                </button>
-                <button
-                  type="button"
-                  disabled
-                  title="USDC settlements coming soon"
-                  className="flex-1 px-4 py-2 rounded-lg text-sm font-medium border border-white/4 bg-white/2 text-white/20 cursor-not-allowed flex items-center justify-center gap-1.5"
-                >
-                  USDC
-                  <span className="text-[10px] text-white/20">soon</span>
-                </button>
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={creating || !groupName.trim()}
-              className="mt-2 py-2.5 rounded-xl text-sm font-semibold bg-accent/10 border border-accent/25 text-accent hover:bg-accent/15 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
-            >
-              {creating && (
-                <div className="w-4 h-4 border-2  border-accent/30 border-t-accent rounded-full animate-spin" />
-              )}
-              {creating ? "Creating…" : "Create Group"}
-            </button>
-          </form>
-        </div>
-      )}
-
-      {/* Groups Grid */}
-      {loading ? (
-        <div className="flex flex-col items-center justify-center py-20 gap-3">
-          <div className="w-8 h-8 border-2 border-white/10 border-t-accent rounded-full animate-spin" />
-          <p className="text-sm text-white/30">Loading your groups…</p>
-        </div>
-      ) : groups.length === 0 ? (
-        <div className="border border-white/[0.07] bg-white/3 rounded-2xl flex flex-col items-center justify-center py-16 px-6 text-center gap-4">
-          <div className="w-14 h-14 rounded-full bg-white/4 border border-white/[0.07] flex items-center justify-center">
-            <Users size={24} className="text-white/20" />
-          </div>
-          <div className="flex flex-col gap-1">
-            <h3 className="text-base font-semibold text-white/70">
-              No groups yet
-            </h3>
-            <p className="text-sm text-white/30 max-w-xs">
-              Create a new group to start tracking expenses or join an existing
-              one via address
+            <h1 className="font-heading text-3xl font-extrabold text-white tracking-tight">
+              Your Groups
+            </h1>
+            <p className="text-sm text-white/35">
+              On-chain expense splitting - transparent, gasless, instant
             </p>
           </div>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {groups.map((g) => (
-            <button
-              key={g.pda}
-              onClick={() => setActiveGroup(g.pda)}
-              className="text-left border border-white/[0.07] bg-white/3 hover:border-accent/20 hover:bg-accent/3 rounded-2xl p-5 transition-all group"
-            >
-              <div className="flex items-start justify-between gap-3 mb-3">
-                <h3 className="text-base font-semibold text-white group-hover:text-accent transition-colors line-clamp-1">
-                  {g.name}
-                </h3>
-                <ArrowRight
-                  size={16}
-                  className="text-white/20 group-hover:text-accent transition-all shrink-0 opacity-0 group-hover:opacity-100 mt-0.5"
-                />
+
+          {/* Stats row */}
+          {groups.length > 0 && (
+            <div className="flex items-center gap-3">
+              <div className="flex flex-col items-center gap-0.5 px-4 py-2.5 rounded-xl border border-white/[0.06] bg-white/[0.03]">
+                <span className="text-xl font-bold text-white tabular-nums">
+                  {groups.length}
+                </span>
+                <span className="text-[10px] text-white/25 uppercase tracking-widest">
+                  Total
+                </span>
               </div>
-
-              <p className="text-[11px] text-white/25 font-mono mb-3">
-                {g.pda.slice(0, 8)}…{g.pda.slice(-6)}
-              </p>
-
-              <div className="flex gap-2 mb-3">
-                {g.isSettled && (
-                  <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                    Settled
+              {liveCount > 0 && (
+                <div className="flex flex-col items-center gap-0.5 px-4 py-2.5 rounded-xl border border-accent/20 bg-accent/[0.06]">
+                  <span className="text-xl font-bold text-accent tabular-nums">
+                    {liveCount}
                   </span>
-                )}
-                {g.isDelegated && !g.isSettled && (
-                  <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-accent/10 text-accent border border-accent/20">
+                  <span className="text-[10px] text-accent/40 uppercase tracking-widest">
                     Live
                   </span>
-                )}
-                <span className="text-[11px] font-medium px-2.5 py-1 rounded-full bg-white/5 text-white/40 border border-white/[0.07]">
+                </div>
+              )}
+              {settledCount > 0 && (
+                <div className="flex flex-col items-center gap-0.5 px-4 py-2.5 rounded-xl border border-emerald-500/20 bg-emerald-500/[0.05]">
+                  <span className="text-xl font-bold text-emerald-400 tabular-nums">
+                    {settledCount}
+                  </span>
+                  <span className="text-[10px] text-emerald-400/40 uppercase tracking-widest">
+                    Done
+                  </span>
+                </div>
+              )}
+              {totalExpenses > 0 && (
+                <div className="flex flex-col items-center gap-0.5 px-4 py-2.5 rounded-xl border border-white/[0.06] bg-white/[0.03]">
+                  <span className="text-xl font-bold text-white tabular-nums">
+                    {totalExpenses}{" "}
+                    <span className="text-[10px] text-gray-400">SOL</span>
+                  </span>
+                  <span className="text-[10px] text-white/25 uppercase tracking-widest">
+                    Expenses
+                  </span>
+                </div>
+              )}
+              {totalSolTracked > 0 && (
+                <div className="flex flex-col items-center gap-0.5 px-4 py-2.5 rounded-xl border border-white/[0.06] bg-white/[0.03]">
+                  <span className="text-xl font-bold text-white tabular-nums">
+                    {totalSolTracked.toFixed(2)}
+                  </span>
+                  <span className="text-[10px] text-white/25 uppercase tracking-widest">
+                    SOL Tracked
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Action row */}
+        <div className="relative flex items-center gap-3 mt-6 pt-5 border-t border-white/[0.05]">
+          <button
+            onClick={() => setShowCreate((v) => !v)}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 ${
+              showCreate
+                ? "border border-white/10 text-white/40 hover:text-white hover:border-white/20 bg-transparent"
+                : "border border-accent/25 bg-accent/[0.08] text-accent hover:bg-accent/[0.14] hover:shadow-[0_0_20px_rgba(102,252,241,0.12)]"
+            }`}
+          >
+            {showCreate ? (
+              "Cancel"
+            ) : (
+              <>
+                <Plus size={15} />
+                New Group
+              </>
+            )}
+          </button>
+
+          <div className="h-5 w-px bg-white/[0.07]" />
+
+          <p className="text-xs text-white/25">
+            {groups.length === 0
+              ? "Create your first group to get started"
+              : `${groups.length} group${groups.length !== 1 ? "s" : ""} found`}
+          </p>
+        </div>
+      </motion.div>
+
+      {/* ── Create Panel ── */}
+      <AnimatePresence>
+        {showCreate && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.3, ease: [0.23, 1, 0.32, 1] }}
+            className="overflow-hidden"
+          >
+            <div className="relative border border-accent/15 bg-accent/[0.03] rounded-2xl p-6 flex flex-col gap-5 overflow-hidden">
+              <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-accent/25 to-transparent" />
+              <div className="absolute -top-8 -right-8 w-32 h-32 bg-accent/5 rounded-full blur-2xl pointer-events-none" />
+
+              <h3 className="relative text-sm font-bold text-white flex items-center gap-2.5">
+                <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-accent/10 border border-accent/20">
+                  <Zap size={12} className="text-accent" />
+                </div>
+                Create New Group
+              </h3>
+
+              <form
+                onSubmit={handleCreate}
+                className="relative flex flex-col gap-4"
+              >
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold uppercase tracking-[0.15em] text-white/25">
+                      Group Name
+                    </label>
+                    <input
+                      className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-4 py-2.5 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/15 transition-all"
+                      placeholder="e.g. Goa Trip 🏖"
+                      value={groupName}
+                      onChange={(e) => setGroupName(e.target.value)}
+                      required
+                      maxLength={32}
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold uppercase tracking-[0.15em] text-white/25">
+                      Description
+                      <span className="ml-1.5 text-white/15 normal-case tracking-normal font-normal">
+                        (optional)
+                      </span>
+                    </label>
+                    <input
+                      className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-4 py-2.5 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/15 transition-all"
+                      placeholder="Add details…"
+                      value={groupDesc}
+                      onChange={(e) => setGroupDesc(e.target.value)}
+                      maxLength={64}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-bold uppercase tracking-[0.15em] text-white/25">
+                    Currency
+                  </label>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setCurrency("SOL")}
+                      className={`flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold border transition-all duration-200 ${
+                        currency === "SOL"
+                          ? "bg-accent/[0.09] border-accent/30 text-accent shadow-[0_0_12px_rgba(102,252,241,0.08)]"
+                          : "bg-white/[0.03] border-white/[0.07] text-white/35 hover:text-white/60 hover:border-white/15"
+                      }`}
+                    >
+                      ◎ SOL
+                    </button>
+                    <button
+                      type="button"
+                      disabled
+                      title="USDC settlements coming soon"
+                      className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium border border-white/[0.04] bg-white/[0.02] text-white/15 cursor-not-allowed flex items-center justify-center gap-1.5"
+                    >
+                      USDC
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-white/15">
+                        soon
+                      </span>
+                    </button>
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={creating || !groupName.trim()}
+                  className="mt-1 py-3 rounded-xl text-sm font-bold border border-accent/25 bg-accent/[0.09] text-accent hover:bg-accent/[0.15] hover:shadow-[0_0_20px_rgba(102,252,241,0.12)] disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-300 flex items-center justify-center gap-2"
+                >
+                  {creating && (
+                    <div className="w-4 h-4 border-2 border-accent/30 border-t-accent rounded-full animate-spin" />
+                  )}
+                  {creating ? "Creating on Solana…" : "Create Group →"}
+                </button>
+              </form>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Groups Grid ── */}
+      {loading ? (
+        <div className="flex flex-col items-center justify-center py-24 gap-4">
+          <div className="relative w-10 h-10">
+            <div className="absolute inset-0 rounded-full border-2 border-accent/10" />
+            <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-accent animate-spin" />
+          </div>
+          <p className="text-sm text-white/25">Fetching your groups…</p>
+        </div>
+      ) : groups.length === 0 ? (
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+          className="relative border border-white/[0.06] bg-white/[0.02] rounded-2xl flex flex-col items-center justify-center py-20 px-6 text-center gap-5 overflow-hidden"
+        >
+          <div className="absolute -top-16 left-1/2 -translate-x-1/2 w-48 h-48 bg-accent/3 rounded-full blur-3xl pointer-events-none" />
+          <div className="relative flex h-16 w-16 items-center justify-center rounded-2xl border border-white/[0.07] bg-white/[0.03]">
+            <Users size={26} className="text-white/15" />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <h3 className="text-base font-bold text-white/60">No groups yet</h3>
+            <p className="text-sm text-white/25 max-w-xs leading-relaxed">
+              Create a new group above or join an existing one via address below
+            </p>
+          </div>
+        </motion.div>
+      ) : (
+        <motion.div
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+          variants={container}
+          initial="hidden"
+          animate="show"
+        >
+          {groups.map((g) => (
+            <motion.button
+              key={g.pda}
+              variants={cardAnim}
+              onClick={() => setActiveGroup(g.pda)}
+              className="group relative text-left border border-white/[0.07] bg-white/[0.025] hover:border-accent/20 hover:bg-accent/[0.03] rounded-2xl p-5 transition-all duration-300 hover:shadow-[0_0_24px_rgba(102,252,241,0.06)] overflow-hidden"
+              whileHover={{ y: -2 }}
+              transition={{ duration: 0.2 }}
+            >
+              {/* Top shimmer on hover */}
+              <span className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-accent/0 to-transparent group-hover:via-accent/25 transition-all duration-500" />
+
+              {/* Status indicator dot */}
+              {g.isDelegated && !g.isSettled && (
+                <span className="absolute top-4 right-4 flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full rounded-full bg-accent opacity-60 animate-ping" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-accent" />
+                </span>
+              )}
+
+              <div className="flex items-start gap-3 mb-4">
+                {/* Avatar */}
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/[0.04] border border-white/[0.06] text-sm font-bold text-white/30 group-hover:border-accent/15 group-hover:text-accent/50 transition-all duration-300">
+                  {g.name.slice(0, 2).toUpperCase()}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-[15px] font-bold text-white/85 group-hover:text-accent transition-colors duration-300 line-clamp-1 leading-tight">
+                    {g.name}
+                  </h3>
+                  <p className="text-[11px] text-white/20 font-mono mt-0.5">
+                    {g.pda.slice(0, 6)}…{g.pda.slice(-5)}
+                  </p>
+                </div>
+              </div>
+
+              {/* Badges */}
+              <div className="flex gap-2 flex-wrap mb-4">
+                {g.isSettled ? (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    ✓ Settled
+                  </span>
+                ) : g.isDelegated ? (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-accent/10 text-accent border border-accent/20">
+                    ⚡ Live
+                  </span>
+                ) : null}
+                <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-white/[0.04] text-white/30 border border-white/[0.06]">
                   {g.currency}
                 </span>
               </div>
 
-              <div className="pt-3 border-t border-white/5 flex items-center gap-1.5 text-xs text-white/25">
-                <Users size={12} />
-                {g.memberCount} member{g.memberCount !== 1 ? "s" : ""}
+              {/* Footer */}
+              <div className="flex items-center justify-between pt-3 border-t border-white/[0.05]">
+                <span className="text-[11px] text-white/20 flex items-center gap-1.5">
+                  <Users size={11} className="text-white/15" />
+                  {g.memberCount} member{g.memberCount !== 1 ? "s" : ""}
+                </span>
+                <ArrowRight
+                  size={14}
+                  className="text-white/15 group-hover:text-accent/60 group-hover:translate-x-0.5 transition-all duration-300"
+                />
               </div>
-            </button>
+            </motion.button>
           ))}
-        </div>
+        </motion.div>
       )}
 
-      {/* Join Section */}
-      <div className="border-t border-white/6 pt-8 flex flex-col gap-4">
-        <div className="flex flex-col gap-1">
-          <h2 className="text-base font-semibold text-white">
-            Join Existing Group
-          </h2>
-          <p className="text-sm text-white/30">
-            Have a group address? Paste it below
-          </p>
+      {/* ── Join Section ── */}
+      <motion.div
+        className="relative border-t border-white/[0.05] pt-8"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.3, duration: 0.4 }}
+      >
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-1">
+            <h2 className="text-sm font-bold text-white/70 flex items-center gap-2">
+              <Search size={14} className="text-white/25" />
+              Join Existing Group
+            </h2>
+            <p className="text-xs text-white/25">
+              Have a group address? Paste it below to view or join
+            </p>
+          </div>
+
+          <form onSubmit={handleJoin} className="flex gap-2">
+            <input
+              className="flex-1 bg-white/[0.04] border border-white/[0.08] rounded-xl px-4 py-2.5 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent/35 focus:ring-1 focus:ring-accent/15 transition-all font-mono"
+              placeholder="Paste group address (Base58)…"
+              value={joinAddr}
+              onChange={(e) => setJoinAddr(e.target.value)}
+            />
+            <button
+              type="submit"
+              disabled={!joinAddr.trim()}
+              className="px-5 py-2.5 rounded-xl text-sm font-semibold border border-white/[0.08] text-white/40 hover:border-accent/25 hover:text-accent disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-300 flex items-center gap-2 whitespace-nowrap"
+            >
+              View <ArrowRight size={14} />
+            </button>
+          </form>
         </div>
-        <form onSubmit={handleJoin} className="flex gap-2">
-          <input
-            className="flex-1 bg-white/4 border border-white/8 rounded-xl px-4 py-2.5 text-sm text-white placeholder-white/20 focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/20 transition-all"
-            placeholder="Paste group address (Base58)"
-            value={joinAddr}
-            onChange={(e) => setJoinAddr(e.target.value)}
-          />
-          <button
-            type="submit"
-            disabled={!joinAddr.trim()}
-            className="px-5 py-2.5 rounded-xl text-sm font-semibold border border-white/8 text-white/50 hover:border-accent/25 hover:text-accent disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center gap-2"
-          >
-            View <ArrowRight size={14} />
-          </button>
-        </form>
-      </div>
+      </motion.div>
     </div>
   );
 }

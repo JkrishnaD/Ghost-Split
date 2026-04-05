@@ -20,7 +20,7 @@ export default function AppWalletProvider({
 
   const wallets = useMemo(
     () => [
-      // typically we don't need to specify wallets here since the standard handles standard ones
+      // standard wallets are auto-detected
     ],
     []
   );
