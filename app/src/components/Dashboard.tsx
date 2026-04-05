@@ -25,6 +25,7 @@ interface GroupCard {
   currency: string;
   memberCount: number;
   isDelegated: boolean;
+  isSettled: boolean;
 }
 
 export default function Dashboard() {
@@ -60,12 +61,19 @@ export default function Dashboard() {
       const seen = new Map<string, GroupCard>();
       for (const g of onChain) {
         const pda = g.publicKey.toBase58();
+        const pk = g.publicKey;
+        let isSettled = false;
+        try {
+          const l = await program.account.groupLedger.fetch(ledgerPda(pk));
+          isSettled = l.isSettled as boolean;
+        } catch {}
         seen.set(pda, {
           pda,
           name: g.account.name,
           currency: g.account.currency.sol ? "SOL" : "USDC",
           memberCount: g.account.members.length,
           isDelegated: g.account.isDelegated,
+          isSettled,
         });
       }
 
@@ -74,13 +82,14 @@ export default function Dashboard() {
         try {
           const pk = new PublicKey(s.pda);
           const g = await program.account.group.fetch(pk);
-          await program.account.groupLedger.fetch(ledgerPda(pk));
+          const l = await program.account.groupLedger.fetch(ledgerPda(pk));
           seen.set(s.pda, {
             pda: s.pda,
             name: g.name,
             currency: g.currency.sol ? "SOL" : "USDC",
             memberCount: g.members.length,
             isDelegated: g.isDelegated,
+            isSettled: l.isSettled as boolean,
           });
         } catch {
           removeGroup(s.pda);
@@ -226,20 +235,26 @@ export default function Dashboard() {
                 Currency
               </label>
               <div className="flex gap-2">
-                {["SOL", "USDC"].map((c) => (
-                  <button
-                    key={c}
-                    type="button"
-                    onClick={() => setCurrency(c)}
-                    className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium border transition-all ${
-                      currency === c
-                        ? "bg-accent/10  border-accent/30 text-accent"
-                        : "bg-white/3 border-white/[0.07] text-white/40 hover:text-white/70"
-                    }`}
-                  >
-                    {c}
-                  </button>
-                ))}
+                <button
+                  type="button"
+                  onClick={() => setCurrency("SOL")}
+                  className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium border transition-all ${
+                    currency === "SOL"
+                      ? "bg-accent/10 border-accent/30 text-accent"
+                      : "bg-white/[0.03] border-white/[0.07] text-white/40 hover:text-white/70"
+                  }`}
+                >
+                  SOL
+                </button>
+                <button
+                  type="button"
+                  disabled
+                  title="USDC settlements coming soon"
+                  className="flex-1 px-4 py-2 rounded-lg text-sm font-medium border border-white/[0.04] bg-white/[0.02] text-white/20 cursor-not-allowed flex items-center justify-center gap-1.5"
+                >
+                  USDC
+                  <span className="text-[10px] text-white/20">soon</span>
+                </button>
               </div>
             </div>
 
@@ -301,7 +316,12 @@ export default function Dashboard() {
               </p>
 
               <div className="flex gap-2 mb-3">
-                {g.isDelegated && (
+                {g.isSettled && (
+                  <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    Settled
+                  </span>
+                )}
+                {g.isDelegated && !g.isSettled && (
                   <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-accent/10 text-accent border border-accent/20">
                     Live
                   </span>

@@ -18,7 +18,12 @@ import {
   useWallet,
 } from "@solana/wallet-adapter-react";
 import { AnchorProvider } from "@coral-xyz/anchor";
-import { Connection, PublicKey } from "@solana/web3.js";
+import {
+  Connection,
+  PublicKey,
+  SystemProgram,
+  Transaction,
+} from "@solana/web3.js";
 import BN from "bn.js";
 import { motion, AnimatePresence } from "motion/react";
 import { getProgram, ledgerPda, expensePda } from "../lib/ghostSplit";
@@ -67,7 +72,7 @@ function short(addr: string) {
 }
 
 export default function GroupView({ groupPdaStr, onBack }: GroupViewProps) {
-  const { publicKey } = useWallet();
+  const { publicKey, sendTransaction } = useWallet();
   const anchorWallet = useAnchorWallet();
   const { connection } = useConnection();
   const [group, setGroup] = useState<GroupData | null>(null);
@@ -88,6 +93,9 @@ export default function GroupView({ groupPdaStr, onBack }: GroupViewProps) {
   const [settling, setSettling] = useState(false);
   const [joining, setJoining] = useState(false);
   const [copied, setCopied] = useState(false);
+  // Track which settlement transfers have been paid (by index)
+  const [paidSettlements, setPaidSettlements] = useState<Set<number>>(new Set());
+  const [payingIndex, setPayingIndex] = useState<number | null>(null);
 
   const groupPda = useMemo(() => new PublicKey(groupPdaStr), [groupPdaStr]);
   const myAddr = publicKey?.toBase58();
@@ -258,10 +266,11 @@ export default function GroupView({ groupPdaStr, onBack }: GroupViewProps) {
   };
 
   const handleSettle = async () => {
-    if (!anchorWallet || !publicKey) return;
+    if (!anchorWallet || !publicKey || !group) return;
     setSettling(true);
     try {
-      const program = getProgram(provider());
+      // mark_settled is ER-routable — use ER when delegated
+      const program = getProgram(provider(group.isDelegated));
       await program.methods
         .markSettled()
         .accounts({ group: groupPda, authority: publicKey })
@@ -273,6 +282,69 @@ export default function GroupView({ groupPdaStr, onBack }: GroupViewProps) {
       toast.error("Failed to settle");
     } finally {
       setSettling(false);
+    }
+  };
+
+  // Compute minimum transfers to settle: classic greedy creditor/debtor
+  function computeSettlements(
+    members: string[],
+    balances: number[]
+  ): { from: string; to: string; amount: number }[] {
+    const debtors = members
+      .map((m, i) => ({ addr: m, bal: balances[i] }))
+      .filter((x) => x.bal < 0)
+      .sort((a, b) => a.bal - b.bal);
+    const creditors = members
+      .map((m, i) => ({ addr: m, bal: balances[i] }))
+      .filter((x) => x.bal > 0)
+      .sort((a, b) => b.bal - a.bal);
+
+    const result: { from: string; to: string; amount: number }[] = [];
+    let d = 0;
+    let c = 0;
+    while (d < debtors.length && c < creditors.length) {
+      const amount = Math.min(-debtors[d].bal, creditors[c].bal);
+      if (amount > 0)
+        result.push({ from: debtors[d].addr, to: creditors[c].addr, amount });
+      debtors[d].bal += amount;
+      creditors[c].bal -= amount;
+      if (debtors[d].bal === 0) d++;
+      if (creditors[c].bal === 0) c++;
+    }
+    return result;
+  }
+
+  const handlePay = async (
+    to: string,
+    amount: number,
+    index: number,
+    currency: "SOL" | "USDC"
+  ) => {
+    if (!publicKey) return;
+    setPayingIndex(index);
+    try {
+      if (currency === "SOL") {
+        const tx = new Transaction().add(
+          SystemProgram.transfer({
+            fromPubkey: publicKey,
+            toPubkey: new PublicKey(to),
+            lamports: amount, // already in lamports
+          })
+        );
+        const sig = await sendTransaction(tx, connection);
+        await connection.confirmTransaction(sig, "confirmed");
+      } else {
+        // USDC: placeholder — Private Payments API would go here
+        throw new Error("USDC private payments coming soon");
+      }
+
+      setPaidSettlements((prev) => new Set([...prev, index]));
+      toast.success("Payment sent!");
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err?.message ?? "Payment failed");
+    } finally {
+      setPayingIndex(null);
     }
   };
 
@@ -756,25 +828,103 @@ export default function GroupView({ groupPdaStr, onBack }: GroupViewProps) {
       )}
 
       {/* ── Mark Settled ── */}
-      {!ledger.isSettled && (
-        <button
-          onClick={handleSettle}
-          disabled={settling || group.isDelegated}
-          title={
-            group.isDelegated
-              ? "End the ER session first"
-              : "Mark all balances as settled"
-          }
-          className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/[0.07] py-3 text-sm font-semibold text-white/30 transition-all hover:border-emerald-500/25 hover:text-emerald-400 disabled:cursor-not-allowed disabled:opacity-30"
-        >
-          <CheckCircle size={14} />
-          {settling
-            ? "Settling…"
-            : group.isDelegated
-            ? "End ER session first to settle"
-            : "Mark All Settled"}
-        </button>
-      )}
+      {!ledger.isSettled &&
+        (() => {
+          const settlements = computeSettlements(
+            group.members,
+            ledger.memberBalances
+          );
+          // Payments I need to make
+          const myDebts = settlements
+            .map((s, i) => ({ ...s, i }))
+            .filter((s) => s.from === myAddr);
+          const allMyDebtsPaid =
+            myDebts.length === 0 ||
+            myDebts.every((s) => paidSettlements.has(s.i));
+
+          return (
+            <div className="flex flex-col gap-3">
+              {/* Settlement breakdown */}
+              {settlements.length > 0 && (
+                <div className="rounded-xl border border-white/[0.07] bg-white/[0.02] overflow-hidden">
+                  <div className="flex items-center gap-2 border-b border-white/[0.05] px-4 py-3">
+                    <CheckCircle size={13} className="text-emerald-400" />
+                    <span className="text-sm font-semibold text-white">
+                      How to settle
+                    </span>
+                  </div>
+                  <div className="divide-y divide-white/[0.04]">
+                    {settlements.map((s, i) => {
+                      const isMyPayment = s.from === myAddr;
+                      const isPaid = paidSettlements.has(i);
+                      const isPaying = payingIndex === i;
+                      return (
+                        <div
+                          key={i}
+                          className={`flex items-center gap-3 px-4 py-3 ${isMyPayment && !isPaid ? "bg-amber-500/[0.03]" : ""}`}
+                        >
+                          <div className="flex flex-1 items-center gap-2 min-w-0">
+                            <span className={`text-xs font-mono truncate ${isMyPayment ? "text-white/70 font-semibold" : "text-white/35"}`}>
+                              {s.from === myAddr ? "you" : short(s.from)}
+                            </span>
+                            <span className="text-white/15 text-xs shrink-0">→</span>
+                            <span className={`text-xs font-mono truncate ${s.to === myAddr ? "text-white/70 font-semibold" : "text-white/35"}`}>
+                              {s.to === myAddr ? "you" : short(s.to)}
+                            </span>
+                          </div>
+
+                          <span className="shrink-0 text-sm font-semibold text-white tabular-nums">
+                            {fmt(s.amount, group.currency)}{" "}
+                            <span className="text-white/30 text-xs">{group.currency}</span>
+                          </span>
+
+                          {/* Pay button — only shown to the person who owes */}
+                          {isMyPayment && (
+                            isPaid ? (
+                              <span className="shrink-0 flex items-center gap-1 text-[11px] text-emerald-400 font-semibold">
+                                <Check size={12} /> Paid
+                              </span>
+                            ) : (
+                              <button
+                                onClick={() => handlePay(s.to, s.amount, i, group.currency)}
+                                disabled={isPaying}
+                                className="shrink-0 flex items-center gap-1.5 rounded-lg border border-amber-400/25 bg-amber-400/[0.07] px-3 py-1.5 text-[11px] font-semibold text-amber-400 transition-all hover:bg-amber-400/[0.13] disabled:opacity-50"
+                              >
+                                {isPaying ? (
+                                  <div className="h-3 w-3 animate-spin rounded-full border-2 border-amber-400/30 border-t-amber-400" />
+                                ) : null}
+                                {isPaying ? "Paying…" : "Pay"}
+                              </button>
+                            )
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Settle button — only enabled after all your payments are done */}
+              <button
+                onClick={handleSettle}
+                disabled={settling || !allMyDebtsPaid}
+                title={!allMyDebtsPaid ? "Pay your share first" : ""}
+                className="flex w-full items-center justify-center gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/[0.05] py-3 text-sm font-semibold text-emerald-400 transition-all hover:bg-emerald-500/10 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {settling ? (
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-emerald-400/30 border-t-emerald-400" />
+                ) : (
+                  <CheckCircle size={14} />
+                )}
+                {settling
+                  ? "Settling…"
+                  : !allMyDebtsPaid
+                  ? "Pay your share to settle"
+                  : "Mark All Settled"}
+              </button>
+            </div>
+          );
+        })()}
     </motion.div>
   );
 }
