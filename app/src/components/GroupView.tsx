@@ -642,53 +642,68 @@ export default function GroupView({ groupPdaStr, onBack }: GroupViewProps) {
         </div>
 
         <div className="divide-y divide-white/4">
-          {group.members.map((addr, i) => {
-            const bal = ledger.memberBalances[i] ?? 0;
-            const isMe = addr === myAddr;
-            const positive = bal > 0;
-            const negative = bal < 0;
+          {(() => {
+            const settlements = computeSettlements(group.members, ledger.memberBalances);
+            return group.members.map((addr, i) => {
+              const bal = ledger.memberBalances[i] ?? 0;
+              const isMe = addr === myAddr;
+              const positive = bal > 0;
+              const negative = bal < 0;
 
-            return (
-              <div
-                key={addr}
-                className={`flex items-center gap-3 px-4 py-3 ${
-                  isMe ? "bg-accent/2" : ""
-                }`}
-              >
+              // Payment status for this member
+              const theirDebts = settlements
+                .map((s, idx) => ({ ...s, idx }))
+                .filter((s) => s.from === addr);
+              const hasPaid =
+                theirDebts.length > 0 &&
+                theirDebts.every((s) => paidSettlements.has(s.idx));
+              const isPending = theirDebts.length > 0 && !hasPaid;
+
+              return (
                 <div
-                  className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
-                    isMe
-                      ? "bg-accent/15 text-accent"
-                      : "bg-white/5 text-white/25"
-                  }`}
+                  key={addr}
+                  className={`flex items-center gap-3 px-4 py-3 ${isMe ? "bg-accent/2" : ""}`}
                 >
-                  {addr.slice(0, 2).toUpperCase()}
-                </div>
+                  <div
+                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
+                      isMe ? "bg-accent/15 text-accent" : "bg-white/5 text-white/25"
+                    }`}
+                  >
+                    {addr.slice(0, 2).toUpperCase()}
+                  </div>
 
-                <div className="flex-1 min-w-0 flex items-center gap-1.5">
-                  <AddrChip addr={addr} />
-                  {isMe && (
-                    <span className="text-[10px] text-accent/50 font-medium">
-                      you
+                  <div className="flex-1 min-w-0 flex items-center gap-1.5">
+                    <AddrChip addr={addr} />
+                    {isMe && (
+                      <span className="text-[10px] text-accent/50 font-medium">you</span>
+                    )}
+                  </div>
+
+                  {/* Payment status tag */}
+                  {hasPaid && (
+                    <span className="flex items-center gap-1 text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
+                      <Check size={10} /> Paid
                     </span>
                   )}
-                </div>
+                  {isPending && (
+                    <span className="flex items-center gap-1 text-[10px] font-semibold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full animate-pulse">
+                      Pending
+                    </span>
+                  )}
 
-                <span
-                  className={`text-sm font-semibold tabular-nums ${
-                    positive
-                      ? "text-emerald-400"
-                      : negative
-                      ? "text-red-400"
-                      : "text-white/20"
-                  }`}
-                >
-                  {positive ? "+" : negative ? "−" : ""}
-                  {fmt(bal, group.currency)} {group.currency}
-                </span>
-              </div>
-            );
-          })}
+                  <span
+                    className={`text-sm font-semibold tabular-nums ${
+                      positive ? "text-emerald-400" : negative ? "text-red-400" : "text-white/20"
+                    }`}
+                  >
+                    {positive ? "+" : negative ? "−" : ""}
+                    {fmt(bal, group.currency)}{" "}
+                    <span className="text-xs text-white/25">{group.currency}</span>
+                  </span>
+                </div>
+              );
+            });
+          })()}
         </div>
       </div>
 

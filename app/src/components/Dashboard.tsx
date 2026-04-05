@@ -241,7 +241,7 @@ export default function Dashboard() {
                   className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium border transition-all ${
                     currency === "SOL"
                       ? "bg-accent/10 border-accent/30 text-accent"
-                      : "bg-white/[0.03] border-white/[0.07] text-white/40 hover:text-white/70"
+                      : "bg-white/3 border-white/[0.07] text-white/40 hover:text-white/70"
                   }`}
                 >
                   SOL
@@ -250,7 +250,7 @@ export default function Dashboard() {
                   type="button"
                   disabled
                   title="USDC settlements coming soon"
-                  className="flex-1 px-4 py-2 rounded-lg text-sm font-medium border border-white/[0.04] bg-white/[0.02] text-white/20 cursor-not-allowed flex items-center justify-center gap-1.5"
+                  className="flex-1 px-4 py-2 rounded-lg text-sm font-medium border border-white/4 bg-white/2 text-white/20 cursor-not-allowed flex items-center justify-center gap-1.5"
                 >
                   USDC
                   <span className="text-[10px] text-white/20">soon</span>

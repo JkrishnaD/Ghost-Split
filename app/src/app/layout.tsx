@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import React from "react";
 import AppWalletProvider from "../components/AppWalletProvider";
+import NavbarWallet from "../components/NavbarWallet";
 import { Toaster } from "sonner";
 
 export const metadata: Metadata = {
@@ -22,6 +23,7 @@ export default function RootLayout({
             <span className="font-heading text-xl font-extrabold tracking-tight">
               Ghost<span className="text-accent">Split</span>
             </span>
+            <NavbarWallet />
           </header>
           <main className="flex-1 max-w-225 w-full mx-auto px-5 py-10">
             {children}
